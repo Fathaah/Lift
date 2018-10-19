@@ -10,7 +10,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 module Elevator();
     parameter N=10;
-    reg[3:0] Floor,From,To,temp;
+    reg[3:0] Floor,From,To,temp,RequestFrom,RequestTo;
     reg Aboard;
     wire clk;
     reg Door,temp1;
@@ -22,9 +22,11 @@ module Elevator();
     Aboard=OFF;
     Door=OFF;
     Floor=IDLE+1;
-    From=IDLE+7;
-    To=IDLE+3;
+    From=IDLE+8;
+    To=IDLE+5;
     i=0;
+    RequestFrom=IDLE+5;
+    RequestTo=IDLE+1;
     
     repeat(N)
     begin
@@ -33,18 +35,18 @@ module Elevator();
         i=i+1;
     end
     temp1=OFF;
-    FromQ[0]=IDLE+4;
-    ToQ[0]=IDLE+1;
-    FromQ[1]=IDLE+5;
+    FromQ[0]=IDLE+6;
+    ToQ[0]=IDLE+4;
+    FromQ[1]=IDLE+6;
     ToQ[1]=IDLE+1;
     FromQ[2]=IDLE+2;
-    ToQ[2]=IDLE+5;
-    FromQ[3]=IDLE+3;
-    ToQ[3]=IDLE+6;
+    ToQ[2]=IDLE+4;
+    FromQ[3]=IDLE+1;
+    ToQ[3]=IDLE+3;
     #100
     $finish;    
     end
-    always@(posedge clk,negedge clk)
+    always@(posedge clk)
     begin
         if(From==IDLE|To==IDLE)
         begin
@@ -110,6 +112,12 @@ module Elevator();
             end
         end//end  if
         end//else
+        if(RequestFrom!=IDLE&&RequestTo!=IDLE)
+        begin    
+            temp1=PushRequest(RequestFrom,RequestTo);
+            RequestFrom<=IDLE;
+            RequestTo<=IDLE;
+        end
     end//always
     always@(*)
     begin
@@ -127,9 +135,11 @@ module Elevator();
             FromQ[N-1]<=IDLE;
             ToQ[N-1]<=IDLE;   
         end//if 1
+
     end//always
     function automatic CheckToStop;
         input[3:0] Floor;
+        reg[3:0] tempFloor;
         reg temp;
         begin
             temp=OFF;
@@ -143,7 +153,9 @@ module Elevator();
                     begin
                         temp=ON;
                         FromQ[i]=IDLE;
+                        tempFloor=To;
                         To=!Dir?(ToQ[i]<To?ToQ[i]:To):(ToQ[i]>To?ToQ[i]:To);
+                        ToQ[i]=(tempFloor==To)?ToQ[i]:tempFloor;
                     end
                 end
                 if(Floor==ToQ[i])
@@ -158,5 +170,26 @@ module Elevator();
             end
         CheckToStop=temp;
         end    
+    endfunction
+    function PushRequest;
+        input[3:0] RequestFrom,RequestTo;
+        reg temp;
+        begin
+            temp=OFF;
+            i=0;
+            repeat(N)
+            begin
+                if((FromQ[i]==IDLE)&&(ToQ[i]==IDLE)&&(temp==OFF))
+                begin
+                    FromQ[i]=RequestFrom;
+                    ToQ[i]=RequestTo;
+                    temp=ON;
+                        
+                end
+                i=i+1;
+            end
+            i=0;
+            assign PushRequest=temp;
+        end
     endfunction
 endmodule
